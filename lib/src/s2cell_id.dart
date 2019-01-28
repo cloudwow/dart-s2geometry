@@ -156,6 +156,79 @@ class S2CellId {
         (_id >> shift) & ((1 << (64 - shift)) - 1), 16 - numZeroDigits);
   }
 
+  S2CellId next([int level]) {
+    level = level ?? this.level;
+    int newId= 0;
+
+    bool carry =true;
+    for(int cursorLevel = level;cursorLevel>=0;cursorLevel--) {
+      int shift = (60 - cursorLevel * 2);
+      int cursorLevelVal = (_id >> shift) & 3;
+      if (carry) {
+        cursorLevelVal = (cursorLevelVal + 1) % 4;
+        carry = cursorLevelVal==0;
+      }
+      newId |= cursorLevelVal<<shift;
+
+    }
+    // set face
+    newId |= (_id>>61&7)<<61;
+    return S2CellId(newId);
+  }
+
+
+
+  S2CellId prev([int level]) {
+    level = level ?? this.level;
+    int newId= 0;
+
+    bool carry =true;
+    for(int cursorLevel = level;cursorLevel>=0;cursorLevel--) {
+      int shift = (60 - cursorLevel * 2);
+      int cursorLevelVal = (_id >> shift) & 3;
+      if (carry) {
+        cursorLevelVal = cursorLevelVal - 1;
+        if (cursorLevelVal==-1) {
+          cursorLevelVal =3;
+        }
+        carry = cursorLevelVal==3;
+      }
+      newId |= cursorLevelVal<<shift;
+
+    }
+    // set face
+    newId |= (_id>>61&7)<<61;
+    return S2CellId(newId);
+  }
+
+  int cellChildAtLevel(int level) {
+    return (_id >> (60-level*2))&3;
+  }
+
+  String myHackyString() {
+    // Simple implementation: print the id in hex without trailing zeros.
+    // Using hex has the advantage that the tokens are case-insensitive, all
+    // characters are alphanumeric, no characters require any special escaping
+    // in queries for most indexing systems, and it's easy to compare cell
+    // tokens against the feature ids of the corresponding features.
+    //
+    // Using base 64 would produce slightly shorter tokens, but for typical cell
+    // sizes used during indexing (up to level 15 or so) the average savings
+    // would be less than 2 bytes per cell which doesn't seem worth it.
+
+    // "0" with trailing 0s stripped is the empty string, which is not a
+    // reasonable token.  Encode as "X".
+    String result ="";
+    int face=_id>>61&7;
+    result+="FACE: ${face}\n";
+    for (int depth=0;depth<30;depth++) {
+      int depthCell=(_id >> (60-depth*2))&3;
+      result+="${depth}: ${depthCell}\n";
+    }
+    return result;
+  }
+
+
   // lsbForLevel returns the lowest-numbered bit that is on for cells at the given level.
   // func lsbForLevel(level int) uint64 { return 1 << uint64(2*(maxLevel-level)) }
 
