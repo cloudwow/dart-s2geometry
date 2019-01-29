@@ -220,10 +220,10 @@ class S2CellId {
     // reasonable token.  Encode as "X".
     String result ="";
     int face=_id>>61&7;
-    result+="FACE: ${face}\n";
+    result+="F:${face} ";
     for (int depth=0;depth<30;depth++) {
       int depthCell=(_id >> (60-depth*2))&3;
-      result+="${depth}: ${depthCell}\n";
+      result+="${depth}:${depthCell==0?"_":depthCell} ";
     }
     return result;
   }
@@ -234,15 +234,9 @@ class S2CellId {
 
   // Parent returns the cell at the given level, which must be no greater than the current level.
   S2CellId parent([int level]) {
-    int lsb = _lsbForLevel(level == null ? this.level - 1 : level);
-    return new S2CellId((_id & -lsb) | lsb);
+    return S2CellId ((_id >> (level*2) ) <<(level*2));
   }
 
-  // immediateParent is cheaper than Parent, but assumes !ci.isFace().
-  S2CellId immediateParent() {
-    int nlsb = lsb() << 2;
-    return new S2CellId((_id & -nlsb) | nlsb);
-  }
 
   // isFace returns whether this is a top-level (face) cell.
   bool isFace() {
