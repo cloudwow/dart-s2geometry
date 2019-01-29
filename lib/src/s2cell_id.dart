@@ -78,6 +78,9 @@ int _lsbForLevel(int level) {
 // need s2sphere.RegionCoverer
 
 class S2CellId {
+
+  int _id = 0;
+
   S2CellId(this._id);
 
   S2CellId.fromPoint(S2Point p) {
@@ -126,6 +129,10 @@ class S2CellId {
 
     _id = n * 2 + 1;
   }
+
+  S2LatLng get latLng {
+    // TODO
+  };
 
   // Print the num_digits low order hex digits.
   String hexFormatString(int val, int numDigits) {
@@ -323,7 +330,6 @@ class S2CellId {
     return _id;
   }
 
-  int _id = 0;
 
   @override
   int get hashCode {
