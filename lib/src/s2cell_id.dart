@@ -26,20 +26,21 @@ export 's2point.dart';
 import 's2latlng.dart';
 import 'util/bits/bits.dart';
 import 'mutableinteger.dart';
+
 const int _kFaceBits = 3;
 const int _kNumFaces = 6;
 const int _kMaxLevel = kMaxCellLevel; // Valid levels: 0..kMaxLevel
 const int _kPosBits = 2 * _kMaxLevel + 1;
 const int _kMaxSize = 1 << _kMaxLevel;
 
-  const int _kSwapMask = 0x01;
-  const int _kInvertMask = 0x02;
+const int _kSwapMask = 0x01;
+const int _kInvertMask = 0x02;
 const int _kLookupBits = 4;
 Uint16List _lookupPos = new Uint16List(1 << (2 * _kLookupBits + 2));
 Uint16List _lookupIJ = new Uint16List(1 << (2 * _kLookupBits + 2));
 
-void _initLookupCell(
-    int level, int i, int j, int origOrientation, int pos, int orientation) {
+void _initLookupCell(int level, int i, int j, int origOrientation, int pos,
+    int orientation) {
   if (level == _kLookupBits) {
     int ij = (i << _kLookupBits) + j;
     _lookupPos[(ij << 2) + origOrientation] = (pos << 2) + orientation;
@@ -62,6 +63,7 @@ void _initLookupCell(
 }
 
 bool _flag = false;
+
 void _maybeInit() {
   if (!_flag) {
     _flag = true;
@@ -121,7 +123,7 @@ class S2CellId {
     // letters [ijpo] denote bits of "i", "j", Hilbert curve position, and
     // Hilbert curve orientation respectively.
     for (int k = 7; k >= 0; --k) {
-      int mask = (1   << _kLookupBits) - 1;
+      int mask = (1 << _kLookupBits) - 1;
       bits += ((i >> (k * _kLookupBits)) & mask) << (_kLookupBits + 2);
       bits += ((j >> (k * _kLookupBits)) & mask) << 2;
       bits = _lookupPos[bits];
@@ -130,11 +132,6 @@ class S2CellId {
     }
 
     _id = n * 2 + 1;
-  }
-
-  S2LatLng get latLng {
-    // TODO
-    return S2LatLng.fromRadians(1.0, 2.0);
   }
 
   // Print the num_digits low order hex digits.
@@ -168,51 +165,48 @@ class S2CellId {
 
   S2CellId next([int level]) {
     level = level ?? this.level;
-    int newId= 0;
+    int newId = 0;
 
-    bool carry =true;
-    for(int cursorLevel = level;cursorLevel>=0;cursorLevel--) {
+    bool carry = true;
+    for (int cursorLevel = level; cursorLevel >= 0; cursorLevel--) {
       int shift = (60 - cursorLevel * 2);
       int cursorLevelVal = (_id >> shift) & 3;
       if (carry) {
         cursorLevelVal = (cursorLevelVal + 1) % 4;
-        carry = cursorLevelVal==0;
+        carry = cursorLevelVal == 0;
       }
-      newId |= cursorLevelVal<<shift;
-
+      newId |= cursorLevelVal << shift;
     }
     // set face
-    newId |= (_id>>61&7)<<61;
+    newId |= (_id >> 61 & 7) << 61;
     return S2CellId(newId);
   }
-
 
 
   S2CellId prev([int level]) {
     level = level ?? this.level;
-    int newId= 0;
+    int newId = 0;
 
-    bool carry =true;
-    for(int cursorLevel = level;cursorLevel>=0;cursorLevel--) {
+    bool carry = true;
+    for (int cursorLevel = level; cursorLevel >= 0; cursorLevel--) {
       int shift = (60 - cursorLevel * 2);
       int cursorLevelVal = (_id >> shift) & 3;
       if (carry) {
         cursorLevelVal = cursorLevelVal - 1;
-        if (cursorLevelVal==-1) {
-          cursorLevelVal =3;
+        if (cursorLevelVal == -1) {
+          cursorLevelVal = 3;
         }
-        carry = cursorLevelVal==3;
+        carry = cursorLevelVal == 3;
       }
-      newId |= cursorLevelVal<<shift;
-
+      newId |= cursorLevelVal << shift;
     }
     // set face
-    newId |= (_id>>61&7)<<61;
+    newId |= (_id >> 61 & 7) << 61;
     return S2CellId(newId);
   }
 
   int cellChildAtLevel(int level) {
-    return (_id >> (60-level*2))&3;
+    return (_id >> (60 - level * 2)) & 3;
   }
 
   String myHackyString() {
@@ -228,12 +222,12 @@ class S2CellId {
 
     // "0" with trailing 0s stripped is the empty string, which is not a
     // reasonable token.  Encode as "X".
-    String result ="";
-    int face=_id>>61&7;
-    result+="F:${face} ";
-    for (int depth=0;depth<30;depth++) {
-      int depthCell=(_id >> (60-depth*2))&3;
-      result+="${depth}:${depthCell==0?"_":depthCell} ";
+    String result = "";
+    int face = _id >> 61 & 7;
+    result += "F:${face} ";
+    for (int depth = 0; depth < 30; depth++) {
+      int depthCell = (_id >> (60 - depth * 2)) & 3;
+      result += "${depth}:${depthCell == 0 ? "_" : depthCell} ";
     }
     return result;
   }
@@ -244,7 +238,27 @@ class S2CellId {
 
   // Parent returns the cell at the given level, which must be no greater than the current level.
   S2CellId parent([int level]) {
-    return S2CellId ((_id >> (level*2) ) <<(level*2));
+    //  int newLsb = lowestOnBitForLevel(level);
+    // return new S2CellId((id & -newLsb) | newLsb);
+
+    int shift = (30 - level) * 2;
+    return new S2CellId((_id >> shift) << shift);
+  }
+
+// Parent returns the cell at the given level, which must be no greater than the current level.
+  S2CellId myHackyParent([int level]) {
+    int shift = (30 - level) * 2;
+    return new S2CellId((_id >> shift) << shift);
+  }
+
+  /**
+   * Return the lowest-numbered bit that is on for this cell id, which is equal
+   * to (uint64(1) << (2 * (MAX_LEVEL - level))). So for example, a.lsb() <=
+   * b.lsb() if and only if a.level() >= b.level(), but the first test is more
+   * efficient.
+   */
+  int lowestOnBitForLevel(int level) {
+    return 1 << (2 * (_kMaxLevel - level));
   }
 
 
@@ -286,15 +300,15 @@ class S2CellId {
     // The arithmetic below is designed to avoid 32-bit integer overflows.
     assert(0 == _kMaxSize % 2);
     double u =
-        max(-kLimit, min(kLimit, kScale * (2 * (i - _kMaxSize / 2) + 1)));
+    max(-kLimit, min(kLimit, kScale * (2 * (i - _kMaxSize / 2) + 1)));
     double v =
-        max(-kLimit, min(kLimit, kScale * (2 * (j - _kMaxSize / 2) + 1)));
+    max(-kLimit, min(kLimit, kScale * (2 * (j - _kMaxSize / 2) + 1)));
 
     // Find the leaf cell coordinates on the adjacent face, and convert
     // them to a cell id at the appropriate level.
     S2FaceUV faceUV = xyzToFaceUV(faceUVToXYZ(face, new R2Point(u, v)));
     _id = new S2CellId.fromFaceIJ(faceUV.face, stToIJ(0.5 * (faceUV.u + 1)),
-            stToIJ(0.5 * (faceUV.v + 1)))
+        stToIJ(0.5 * (faceUV.v + 1)))
         ._id;
   }
 
@@ -303,10 +317,12 @@ class S2CellId {
       _id = new S2CellId.fromFaceIJ(face, i, j)._id;
     else
       _id = new S2CellId.fromFaceIJWrap(face, i, j)._id;
-  } 
-  int  get face {
-    return (_id >> 61) &7;
   }
+
+  int get face {
+    return (_id >> 61) & 7;
+  }
+
   int toFaceIJOrientation(MutableInteger pi, MutableInteger pj,
       MutableInteger orientation) {
     // System.out.println("Entering toFaceIjorientation");
@@ -341,13 +357,15 @@ class S2CellId {
       if ((lowestOnBit & 0x1111111111111110) != 0) {
         bits ^= _kSwapMask;
       }
-      orientation.value=bits;
+      orientation.value = bits;
     }
     return face;
   }
+
   S2LatLng toLatLng() {
-    return  S2LatLng.fromPoint (toPointRaw());
+    return S2LatLng.fromPoint(toPointRaw());
   }
+
   int get lowestOnBit {
     return _id & -_id;
   }
@@ -355,15 +373,15 @@ class S2CellId {
   int getBits1(MutableInteger i, MutableInteger j, int k, int bits) {
     final int nbits = (k == 7) ? (_kMaxLevel - 7 * _kLookupBits) : _kLookupBits;
 
-    bits += (( (id >> (k * 2 * _kLookupBits + 1)) &
-            ((1 << (2 * nbits)) - 1))) << 2;
+    bits += (((id >> (k * 2 * _kLookupBits + 1)) &
+    ((1 << (2 * nbits)) - 1))) << 2;
     /*
      * System.out.println("id is: " + id_); System.out.println("bits is " +
      * bits); System.out.println("lookup_ij[bits] is " + lookup_ij[bits]);
      */
     bits = _lookupIJ[bits];
-    i.value=(i.value
-      + ((bits >> (_kLookupBits + 2)) << (k * _kLookupBits)));
+    i.value = (i.value
+        + ((bits >> (_kLookupBits + 2)) << (k * _kLookupBits)));
     /*
      * System.out.println("left is " + ((bits >> 2) & ((1 << kLookupBits) -
      * 1))); System.out.println("right is " + (k * kLookupBits));
@@ -371,8 +389,8 @@ class S2CellId {
      * is: " + ((((bits >> 2) & ((1 << kLookupBits) - 1))) << (k *
      * kLookupBits)));
      */
-    j.value=(j.value
-      + ((((bits >> 2) & ((1 << _kLookupBits) - 1))) << (k * _kLookupBits)));
+    j.value = (j.value
+        + ((((bits >> 2) & ((1 << _kLookupBits) - 1))) << (k * _kLookupBits)));
     bits &= (_kSwapMask | _kInvertMask);
     return bits;
   }
@@ -401,8 +419,8 @@ class S2CellId {
     MutableInteger j = new MutableInteger(0);
     int face = toFaceIJOrientation(i, j, null);
     // System.out.println("i= " + i.intValue() + " j = " + j.intValue());
-    int delta = isLeaf ? 1 : (((i.value ^ (( id) >> 2)) & 1) != 0)
-      ? 2 : 0;
+    int delta = isLeaf ? 1 : (((i.value ^ ((id) >> 2)) & 1) != 0)
+        ? 2 : 0;
     int si = (i.value << 1) + delta - _kMaxSize;
     int ti = (j.value << 1) + delta - _kMaxSize;
     return faceSiTiToXYZ(face, si, ti);
@@ -420,13 +438,11 @@ class S2CellId {
   }
 
   static double stToUV(double s) {
-    
-        if (s >= 0.0) {
-          return (1.0 / 3.0) * ((1 + s) * (1 + s) - 1);
-        } else {
-          return (1.0 / 3.0) * (1 - (1 - s) * (1 - s));
-        }
-   
+    if (s >= 0.0) {
+      return (1.0 / 3.0) * ((1 + s) * (1 + s) - 1);
+    } else {
+      return (1.0 / 3.0) * (1 - (1 - s) * (1 - s));
+    }
   }
 
 
@@ -450,11 +466,12 @@ class S2CellId {
         return new S2Point(v, u, -1);
     }
   }
+
   /**
    * Return true if this is a leaf cell (more efficient than checking whether
    * level() == MAX_LEVEL).
    */
-   bool get isLeaf {
+  bool get isLeaf {
     return (_id & 1) != 0;
   }
 
