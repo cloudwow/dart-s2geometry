@@ -15,6 +15,7 @@
 
 // Ported from the C++ s2geometry and Go geo libraries to Dart by
 // Jan Boon <kaetemi@no-break.space>
+import "dart:math";
 
 class S2Point {
   S2Point(this.x, this.y, this.z);
@@ -32,6 +33,13 @@ class S2Point {
     }
   }
 
+  double get magnitude {
+    return sqrt(x*x+y*y+z*z);
+  }
+  S2Point normalized() {
+    double m =magnitude;
+    return S2Point(x/m,y/m,z/m);
+  }
   S2Point abs() {
     return new S2Point(x.abs(), y.abs(), z.abs());
   }

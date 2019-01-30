@@ -25,13 +25,15 @@ import 's2point.dart';
 export 's2point.dart';
 import 's2latlng.dart';
 import 'util/bits/bits.dart';
-
+import 'mutableinteger.dart';
 const int _kFaceBits = 3;
 const int _kNumFaces = 6;
 const int _kMaxLevel = kMaxCellLevel; // Valid levels: 0..kMaxLevel
 const int _kPosBits = 2 * _kMaxLevel + 1;
 const int _kMaxSize = 1 << _kMaxLevel;
 
+  const int _kSwapMask = 0x01;
+  const int _kInvertMask = 0x02;
 const int _kLookupBits = 4;
 Uint16List _lookupPos = new Uint16List(1 << (2 * _kLookupBits + 2));
 Uint16List _lookupIJ = new Uint16List(1 << (2 * _kLookupBits + 2));
@@ -119,7 +121,7 @@ class S2CellId {
     // letters [ijpo] denote bits of "i", "j", Hilbert curve position, and
     // Hilbert curve orientation respectively.
     for (int k = 7; k >= 0; --k) {
-      int mask = (1 << _kLookupBits) - 1;
+      int mask = (1   << _kLookupBits) - 1;
       bits += ((i >> (k * _kLookupBits)) & mask) << (_kLookupBits + 2);
       bits += ((j >> (k * _kLookupBits)) & mask) << 2;
       bits = _lookupPos[bits];
@@ -132,7 +134,8 @@ class S2CellId {
 
   S2LatLng get latLng {
     // TODO
-  };
+    return S2LatLng.fromRadians(1.0, 2.0);
+  }
 
   // Print the num_digits low order hex digits.
   String hexFormatString(int val, int numDigits) {
@@ -300,6 +303,159 @@ class S2CellId {
       _id = new S2CellId.fromFaceIJ(face, i, j)._id;
     else
       _id = new S2CellId.fromFaceIJWrap(face, i, j)._id;
+  } 
+  int  get face {
+    return (_id >> 61) &7;
+  }
+  int toFaceIJOrientation(MutableInteger pi, MutableInteger pj,
+      MutableInteger orientation) {
+    // System.out.println("Entering toFaceIjorientation");
+    int face = this.face;
+    int bits = (face & _kSwapMask);
+
+    // System.out.println("face = " + face + " bits = " + bits);
+
+    // Each iteration maps 8 bits of the Hilbert curve position into
+    // 4 bits of "i" and "j". The lookup table transforms a key of the
+    // form "ppppppppoo" to a value of the form "iiiijjjjoo", where the
+    // letters [ijpo] represents bits of "i", "j", the Hilbert curve
+    // position, and the Hilbert curve orientation respectively.
+    //
+    // On the first iteration we need to be careful to clear out the bits
+    // representing the cube face.
+    for (int k = 7; k >= 0; --k) {
+      bits = getBits1(pi, pj, k, bits);
+      // System.out.println("pi = " + pi + " pj= " + pj + " bits = " + bits);
+    }
+
+    if (orientation != null) {
+      // The position of a non-leaf cell at level "n" consists of a prefix of
+      // 2*n bits that identifies the cell, followed by a suffix of
+      // 2*(MAX_LEVEL-n)+1 bits of the form 10*. If n==MAX_LEVEL, the suffix is
+      // just "1" and has no effect. Otherwise, it consists of "10", followed
+      // by (MAX_LEVEL-n-1) repetitions of "00", followed by "0". The "10" has
+      // no effect, while each occurrence of "00" has the effect of reversing
+      // the kSwapMask bit.
+      // assert (S2.POS_TO_ORIENTATION[2] == 0);
+      // assert (S2.POS_TO_ORIENTATION[0] == S2.SWAP_MASK);
+      if ((lowestOnBit & 0x1111111111111110) != 0) {
+        bits ^= _kSwapMask;
+      }
+      orientation.value=bits;
+    }
+    return face;
+  }
+  S2LatLng toLatLng() {
+    return  S2LatLng.fromPoint (toPointRaw());
+  }
+  int get lowestOnBit {
+    return _id & -_id;
+  }
+
+  int getBits1(MutableInteger i, MutableInteger j, int k, int bits) {
+    final int nbits = (k == 7) ? (_kMaxLevel - 7 * _kLookupBits) : _kLookupBits;
+
+    bits += (( (id >> (k * 2 * _kLookupBits + 1)) &
+            ((1 << (2 * nbits)) - 1))) << 2;
+    /*
+     * System.out.println("id is: " + id_); System.out.println("bits is " +
+     * bits); System.out.println("lookup_ij[bits] is " + lookup_ij[bits]);
+     */
+    bits = _lookupIJ[bits];
+    i.value=(i.value
+      + ((bits >> (_kLookupBits + 2)) << (k * _kLookupBits)));
+    /*
+     * System.out.println("left is " + ((bits >> 2) & ((1 << kLookupBits) -
+     * 1))); System.out.println("right is " + (k * kLookupBits));
+     * System.out.println("j is: " + j.intValue()); System.out.println("addition
+     * is: " + ((((bits >> 2) & ((1 << kLookupBits) - 1))) << (k *
+     * kLookupBits)));
+     */
+    j.value=(j.value
+      + ((((bits >> 2) & ((1 << _kLookupBits) - 1))) << (k * _kLookupBits)));
+    bits &= (_kSwapMask | _kInvertMask);
+    return bits;
+  }
+
+  S2Point toPointRaw() {
+    // First we compute the discrete (i,j) coordinates of a leaf cell contained
+    // within the given cell. Given that cells are represented by the Hilbert
+    // curve position corresponding at their center, it turns out that the cell
+    // returned by ToFaceIJOrientation is always one of two leaf cells closest
+    // to the center of the cell (unless the given cell is a leaf cell itself,
+    // in which case there is only one possibility).
+    //
+    // Given a cell of size s >= 2 (i.e. not a leaf cell), and letting (imin,
+    // jmin) be the coordinates of its lower left-hand corner, the leaf cell
+    // returned by ToFaceIJOrientation() is either (imin + s/2, jmin + s/2)
+    // (imin + s/2 - 1, jmin + s/2 - 1). We can distinguish these two cases by
+    // looking at the low bit of "i" or "j". In the first case the low bit is
+    // zero, unless s == 2 (i.e. the level just above leaf cells) in which case
+    // the low bit is one.
+    //
+    // The following calculation converts (i,j) to the (si,ti) coordinates of
+    // the cell center. (We need to multiply the coordinates by a factor of 2
+    // so that the center of leaf cells can be represented exactly.)
+
+    MutableInteger i = new MutableInteger(0);
+    MutableInteger j = new MutableInteger(0);
+    int face = toFaceIJOrientation(i, j, null);
+    // System.out.println("i= " + i.intValue() + " j = " + j.intValue());
+    int delta = isLeaf ? 1 : (((i.value ^ (( id) >> 2)) & 1) != 0)
+      ? 2 : 0;
+    int si = (i.value << 1) + delta - _kMaxSize;
+    int ti = (j.value << 1) + delta - _kMaxSize;
+    return faceSiTiToXYZ(face, si, ti);
+  }
+
+  /**
+   * Convert (face, si, ti) coordinates (see s2.h) to a direction vector (not
+   * necessarily unit length).
+   */
+  static S2Point faceSiTiToXYZ(int face, int si, int ti) {
+    final double kScale = 1.0 / _kMaxSize;
+    double u = stToUV(kScale * si);
+    double v = stToUV(kScale * ti);
+    return faceUvToXyz(face, u, v);
+  }
+
+  static double stToUV(double s) {
+    
+        if (s >= 0.0) {
+          return (1.0 / 3.0) * ((1 + s) * (1 + s) - 1);
+        } else {
+          return (1.0 / 3.0) * (1 - (1 - s) * (1 - s));
+        }
+   
+  }
+
+
+  /**
+   * Convert (face, u, v) coordinates to a direction vector (not necessarily
+   * unit length).
+   */
+  static S2Point faceUvToXyz(int face, double u, double v) {
+    switch (face) {
+      case 0:
+        return new S2Point(1, u, v);
+      case 1:
+        return new S2Point(-u, 1, v);
+      case 2:
+        return new S2Point(-u, -v, 1);
+      case 3:
+        return new S2Point(-1, -v, -u);
+      case 4:
+        return new S2Point(v, -1, -u);
+      default:
+        return new S2Point(v, u, -1);
+    }
+  }
+  /**
+   * Return true if this is a leaf cell (more efficient than checking whether
+   * level() == MAX_LEVEL).
+   */
+   bool get isLeaf {
+    return (_id & 1) != 0;
   }
 
 /*

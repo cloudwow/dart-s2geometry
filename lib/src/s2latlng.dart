@@ -25,11 +25,18 @@ import 'r2point.dart';
 export 'r2point.dart';
 
 class S2LatLng {
-  S2LatLng(S1Angle lat, S1Angle lng) : _coords = new R2Point(lat.radians, lng.radians);
+  S2LatLng(S1Angle lat, S1Angle lng)
+      : _coords = new R2Point(lat.radians, lng.radians);
   S2LatLng.invalid() : _coords = new R2Point(pi, 2.0 * pi);
   S2LatLng.zero() : _coords = new R2Point.zero();
-  S2LatLng.fromRadians(double lat, double lng) : _coords = new R2Point(lat, lng);
-  S2LatLng.fromDegrees(double lat, double lng) : _coords = new R2Point(new S1Angle.fromDegrees(lat).radians, new S1Angle.fromDegrees(lng).radians);
+  S2LatLng.fromRadians(double lat, double lng)
+      : _coords = new R2Point(lat, lng);
+  S2LatLng.fromDegrees(double lat, double lng)
+      : _coords = new R2Point(new S1Angle.fromDegrees(lat).radians,
+            new S1Angle.fromDegrees(lng).radians);
+  S2LatLng.fromPoint(S2Point p)
+      : _coords = new R2Point(
+            atan2(p.z, sqrt(p.x * p.x + p.y * p.y)), atan2(p.y, p.x));
 
   S1Angle get lat {
     return new S1Angle.fromRadians(_coords.x);
