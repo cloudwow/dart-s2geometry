@@ -238,11 +238,11 @@ class S2CellId {
 
   // Parent returns the cell at the given level, which must be no greater than the current level.
   S2CellId parent([int level]) {
-    //  int newLsb = lowestOnBitForLevel(level);
-    // return new S2CellId((id & -newLsb) | newLsb);
+     int newLsb = lowestOnBitForLevel(level);
+     return new S2CellId((id & -newLsb) | newLsb);
 
-    int shift = (30 - level) * 2;
-    return new S2CellId((_id >> shift) << shift);
+  //  int shift = (30 - level) * 2;
+  //   return new S2CellId((_id >> shift) << shift);
   }
 
 // Parent returns the cell at the given level, which must be no greater than the current level.
