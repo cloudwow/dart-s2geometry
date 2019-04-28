@@ -62,4 +62,28 @@ class S1Angle {
     S1Angle angle = other;
     return _radians > angle._radians;
   }
+
+  bool lessThan(S1Angle that) {
+    return this.radians < that.radians;
+  }
+
+  bool greaterThan(S1Angle that) {
+    return this.radians > that.radians;
+  }
+
+  bool lessOrEquals(S1Angle that) {
+    return this.radians <= that.radians;
+  }
+
+  bool greaterOrEquals(S1Angle that) {
+    return this.radians >= that.radians;
+  }
+
+  static S1Angle max(S1Angle left, S1Angle right) {
+    return right.greaterThan(left) ? right : left;
+  }
+
+  static S1Angle min(S1Angle left, S1Angle right) {
+    return right.greaterThan(left) ? left : right;
+  }
 }

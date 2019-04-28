@@ -13,6 +13,10 @@ class R1Interval {
   /** Interval constructor. If lo > hi, the interval is empty. */
   R1Interval({this.lo: 1.0, this.hi: 0.0});
 
+  static R1Interval empty() {
+    return new R1Interval(lo: 1, hi: 0);
+  }
+
   /**
    * Convenience method to construct an interval containing a single point.
    */

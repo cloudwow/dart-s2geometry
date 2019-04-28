@@ -18,10 +18,14 @@
  * representing the empty and full rectangles as well as single points.
  *
  */
+import 'dart:math';
 import "r1_interval.dart";
 import "s1_interval.dart";
 import 's2latlng.dart';
 import 'constants.dart';
+import 's1angle.dart';
+import 's2.dart';
+import 's2_edge_util.dart';
 class S2LatLngRect  {
 
     final R1Interval lat;
@@ -46,7 +50,7 @@ S2LatLngRect({this.lat, this.lng});
 
   /** The canonical full rectangle. */
    static S2LatLngRect full() {
-    return new S2LatLngRect(fullLat(), fullLng());
+    return new S2LatLngRect(lat:fullLat(),lng: fullLng());
   }
 
   /** The full allowable range of latitudes. */
@@ -115,11 +119,11 @@ S2LatLngRect({this.lat, this.lng});
     }
     // Minimum/maximum latitude occurs in the edge interior. This affects the
     // latitude bounds but not the longitude bounds.
-    double absLat = Math.acos(Math.abs(ab.z / ab.norm()));
+    double absLat = acos(ab.z / ab.norm.abs());
     if (da < 0) {
-      return new S2LatLngRect(new R1Interval(r.lat.lo(), absLat), r.lng);
+      return new S2LatLngRect(lat:new R1Interval(lo:r.lat.lo,hi: absLat),lng: r.lng);
     } else {
-      return new S2LatLngRect(new R1Interval(-absLat, r.lat.hi()), r.lng);
+      return new S2LatLngRect(lat: new R1Interval(lo:-absLat,hi: r.lat.hi),lng: r.lng);
     }
   }
 
@@ -129,27 +133,27 @@ S2LatLngRect({this.lat, this.lng});
    * bounds do not exceed Pi in absolute value.
    *
    */
-  boolean isValid() {
+  bool isValid() {
     // The lat/lng ranges must either be both empty or both non-empty.
-    return (Math.abs(lat.lo()) <= S2.M_PI_2 && Math.abs(lat.hi()) <= S2.M_PI_2
-      && lng.isValid() && lat.isEmpty() == lng.isEmpty());
+    return lat.lo.abs() <= PI_2 && lat.hi.abs() <= PI_2
+      && lng.isValid() && lat.isEmpty == lng.isEmpty;
   }
 
   // Accessor methods.
   S1Angle latLo() {
-    return S1Angle.radians(lat.lo());
+    return S1Angle.fromRadians(lat.lo);
   }
 
   S1Angle latHi() {
-    return S1Angle.radians(lat.hi());
+    return S1Angle.fromRadians(lat.hi);
   }
 
   S1Angle lngLo() {
-    return S1Angle.radians(lng.lo());
+    return S1Angle.fromRadians(lng.lo);
   }
 
   S1Angle lngHi() {
-    return S1Angle.radians(lng.hi());
+    return S1Angle.fromRadians(lng.hi);
   }
 
 
@@ -164,20 +168,20 @@ S2LatLngRect({this.lat, this.lng});
   /**
    * Return true if the rectangle is empty, i.e. it contains no points at all.
    */
-  boolean isEmpty() {
-    return lat.isEmpty();
+  bool get isEmpty {
+    return lat.isEmpty;
   }
 
   // Return true if the rectangle is full, i.e. it contains all points.
-  boolean isFull() {
+  bool  get isFull {
     return lat.equals(fullLat()) && lng.isFull();
   }
 
   /**
-   * Return true if lng_.lo() > lng_.hi(), i.e. the rectangle crosses the 180
+   * Return true if lng_.lo > lng_.hi, i.e. the rectangle crosses the 180
    * degree latitude line.
    */
-  boolean isInverted() {
+  bool get isInverted {
     return lng.isInverted();
   }
 
@@ -186,15 +190,15 @@ S2LatLngRect({this.lat, this.lng});
     // Return the points in CCW order (SW, SE, NE, NW).
     switch (k) {
       case 0:
-        return S2LatLng.fromRadians(lat.lo(), lng.lo());
+        return S2LatLng.fromRadians(lat.lo, lng.lo);
       case 1:
-        return S2LatLng.fromRadians(lat.lo(), lng.hi());
+        return S2LatLng.fromRadians(lat.lo, lng.hi);
       case 2:
-        return S2LatLng.fromRadians(lat.hi(), lng.hi());
+        return S2LatLng.fromRadians(lat.hi, lng.hi);
       case 3:
-        return S2LatLng.fromRadians(lat.hi(), lng.lo());
+        return S2LatLng.fromRadians(lat.hi, lng.lo);
       default:
-        throw new IllegalArgumentException("Invalid vertex index.");
+        throw new Exception("Invalid vertex index.");
     }
   }
 
@@ -203,7 +207,7 @@ S2LatLngRect({this.lat, this.lng});
    * this is not the center of the region on the sphere).
    */
   S2LatLng getCenter() {
-    return S2LatLng.fromRadians(lat.getCenter(), lng.getCenter());
+    return S2LatLng.fromRadians(lat.center, lng.getCenter());
   }
 
   /**
@@ -216,42 +220,42 @@ S2LatLngRect({this.lat, this.lng});
     // with simplified calculations.
     S2LatLngRect a = this;
 
-    Preconditions.checkState(!a.isEmpty());
-    Preconditions.checkArgument(p.isValid());
+    assert(!a.isEmpty);
+    assert(p.isValid);
 
     if (a.lng.contains(p.lng.radians)) {
-      return S1Angle.radians(Math.max(0.0, Math.max(p.lat.radians - a.lat.hi(),
-                                                    a.lat.lo() - p.lat.radians)));
+      return S1Angle.fromRadians(max(0.0, max(p.lat.radians - a.lat.hi,
+                                                    a.lat.lo - p.lat.radians)));
     }
 
-    S1Interval interval = new S1Interval(a.lng.hi(), a.lng.complement().getCenter());
-    double aLng = a.lng.lo();
+    S1Interval interval = new S1Interval(lo: a.lng.hi,hi: a.lng.complement().getCenter());
+    double aLng = a.lng.lo;
     if (interval.contains(p.lng.radians)) {
-      aLng = a.lng.hi();
+      aLng = a.lng.hi;
     }
 
-    S2Point lo = S2LatLng.fromRadians(a.lat.lo(), aLng).toPoint();
-    S2Point hi = S2LatLng.fromRadians(a.lat.hi(), aLng).toPoint();
+    S2Point lo = S2LatLng.fromRadians(a.lat.lo, aLng).toPoint();
+    S2Point hi = S2LatLng.fromRadians(a.lat.hi, aLng).toPoint();
     S2Point loCrossHi =
-        S2LatLng.fromRadians(0, aLng - S2.M_PI_2).normalized().toPoint();
-    return S2EdgeUtil.getDistance(p.toPoint(), lo, hi, loCrossHi);
+        S2LatLng.fromRadians(0, aLng - PI_2).normalized.toPoint();
+    return S2EdgeUtil.getDistanceWithCross(p.toPoint(), lo, hi, loCrossHi);
   }
 
   /**
    * Return the minimum distance (measured along the surface of the sphere) to
    * the given S2LatLngRect. Both S2LatLngRects must be non-empty.
    */
-  S1Angle getDistance(S2LatLngRect other) {
+  S1Angle getDistanceToRect(S2LatLngRect other) {
     S2LatLngRect a = this;
     S2LatLngRect b = other;
 
-    Preconditions.checkState(!a.isEmpty());
-    Preconditions.checkArgument(!b.isEmpty());
+    assert(!a.isEmpty);
+    assert(!b.isEmpty);
 
     // First, handle the trivial cases where the longitude intervals overlap.
     if (a.lng.intersects(b.lng)) {
       if (a.lat.intersects(b.lat)) {
-        return S1Angle.radians(0);  // Intersection between a and b.
+        return S1Angle.fromRadians(0);  // Intersection between a and b.
       }
 
       // We found an overlap in the longitude interval, but not in the latitude
@@ -259,22 +263,22 @@ S2LatLngRect({this.lat, this.lng});
       // longitude connecting the high-latitude of the lower rect with the
       // low-latitude of the higher rect.
       S1Angle lo, hi;
-      if (a.lat.lo() > b.lat.hi()) {
+      if (a.lat.lo > b.lat.hi) {
         lo = b.latHi();
         hi = a.latLo();
       } else {
         lo = a.latHi();
         hi = b.latLo();
       }
-      return S1Angle.radians(hi.radians - lo.radians);
+      return S1Angle.fromRadians(hi.radians - lo.radians);
     }
 
     // The longitude intervals don't overlap. In this case, the closest points
     // occur somewhere on the pair of longitudinal edges which are nearest in
     // longitude-space.
     S1Angle aLng, bLng;
-    S1Interval loHi = S1Interval.fromPointPair(a.lng.lo(), b.lng.hi());
-    S1Interval hiLo = S1Interval.fromPointPair(a.lng.hi(), b.lng.lo());
+    S1Interval loHi = S1Interval.fromPointPair(a.lng.lo, b.lng.hi);
+    S1Interval hiLo = S1Interval.fromPointPair(a.lng.hi, b.lng.lo);
     if (loHi.getLength() < hiLo.getLength()) {
       aLng = a.lngLo();
       bLng = b.lngHi();
@@ -291,16 +295,16 @@ S2LatLngRect({this.lat, this.lng});
     S2Point aLo = new S2LatLng(a.latLo(), aLng).toPoint();
     S2Point aHi = new S2LatLng(a.latHi(), aLng).toPoint();
     S2Point aLoCrossHi =
-        S2LatLng.fromRadians(0, aLng.radians - S2.M_PI_2).normalized().toPoint();
+        S2LatLng.fromRadians(0, aLng.radians - PI_2).normalized.toPoint();
     S2Point bLo = new S2LatLng(b.latLo(), bLng).toPoint();
     S2Point bHi = new S2LatLng(b.latHi(), bLng).toPoint();
     S2Point bLoCrossHi =
-        S2LatLng.fromRadians(0, bLng.radians - S2.M_PI_2).normalized().toPoint();
+        S2LatLng.fromRadians(0, bLng.radians - PI_2).normalized.toPoint();
 
-    return S1Angle.min(S2EdgeUtil.getDistance(aLo, bLo, bHi, bLoCrossHi),
-                       S1Angle.min(S2EdgeUtil.getDistance(aHi, bLo, bHi, bLoCrossHi),
-                                   S1Angle.min(S2EdgeUtil.getDistance(bLo, aLo, aHi, aLoCrossHi),
-                                               S2EdgeUtil.getDistance(bHi, aLo, aHi, aLoCrossHi))));
+    return S1Angle.min(S2EdgeUtil.getDistanceWithCross(aLo, bLo, bHi, bLoCrossHi),
+                       S1Angle.min(S2EdgeUtil.getDistanceWithCross(aHi, bLo, bHi, bLoCrossHi),
+                                   S1Angle.min(S2EdgeUtil.getDistanceWithCross(bLo, aLo, aHi, aLoCrossHi),
+                                               S2EdgeUtil.getDistanceWithCross(bHi, aLo, aHi, aLoCrossHi))));
   }
 
   /**
@@ -308,16 +312,16 @@ S2LatLngRect({this.lat, this.lng});
    * Empty rectangles have a negative width and height.
    */
   S2LatLng getSize() {
-    return S2LatLng.fromRadians(lat.getLength(), lng.getLength());
+    return S2LatLng.fromRadians(lat.length, lng.getLength());
   }
 
   /**
    * More efficient version of Contains() that accepts a S2LatLng rather than an
    * S2Point.
    */
-  boolean contains(S2LatLng ll) {
+  bool contains(S2LatLng ll) {
     // assert (ll.isValid());
-    return (lat.contains(ll.lat.radians) && lng.contains(ll.lng
+    return (lat.contains1(ll.lat.radians) && lng.contains(ll.lng
       .radians));
 
   }
@@ -327,17 +331,17 @@ S2LatLngRect({this.lat, this.lng});
    * the region (i.e. the region excluding its boundary). The point 'p' does not
    * need to be normalized.
    */
-  boolean interiorContains(S2Point p) {
-    return interiorContains(new S2LatLng(p));
+  bool interiorContains(S2Point p) {
+    return interiorContainsLatLng( S2LatLng.fromPoint(p));
   }
 
   /**
    * More efficient version of InteriorContains() that accepts a S2LatLng rather
    * than an S2Point.
    */
-  boolean interiorContains(S2LatLng ll) {
+  bool interiorContainsLatLng(S2LatLng ll) {
     // assert (ll.isValid());
-    return (lat.interiorContains(ll.lat.radians) && lng
+    return (lat.interiorContains1(ll.lat.radians) && lng
       .interiorContains(ll.lng.radians));
   }
 
@@ -345,35 +349,36 @@ S2LatLngRect({this.lat, this.lng});
    * Return true if and only if the rectangle contains the given other
    * rectangle.
    */
-  boolean contains(S2LatLngRect other) {
-    return lat.contains(other.lat) && lng.contains(other.lng);
+  bool containsRect(S2LatLngRect other) {
+    return lat.contains2(other.lat) && lng.contains1(other.lng);
   }
 
   /**
    * Return true if and only if the interior of this rectangle contains all
    * points of the given other rectangle (including its boundary).
    */
-  boolean interiorContains(S2LatLngRect other) {
-    return (lat.interiorContains(other.lat) && lng
-      .interiorContains(other.lng));
+  bool interiorContainsRect(S2LatLngRect other) {
+    return (lat.interiorContains2(other.lat) && lng
+      .interiorContains1(other.lng));
   }
 
   /** Return true if this rectangle and the given other rectangle have any
   points in common. */
-  boolean intersects(S2LatLngRect other) {
+  bool intersects(S2LatLngRect other) {
     return lat.intersects(other.lat) && lng.intersects(other.lng);
   }
 
+  
   /**
    * Returns true if this rectangle intersects the given cell. (This is an exact
    * test and may be fairly expensive, see also MayIntersect below.)
    */
-  boolean intersects(S2Cell cell) {
+  bool intersects(S2Cell cell) {
     // First we eliminate the cases where one region completely contains the
     // other. Once these are disposed of, then the regions will intersect
     // if and only if their boundaries intersect.
 
-    if (isEmpty()) {
+    if (isEmpty) {
       return false;
     }
     if (contains(cell.getCenter())) {
@@ -412,20 +417,20 @@ S2LatLngRect({this.lat, this.lng});
 
       final S2Point a = cellV[i];
       final S2Point b = cellV[(i + 1) & 3];
-      if (edgeLng.contains(lng.lo())) {
-        if (intersectsLngEdge(a, b, lat, lng.lo())) {
+      if (edgeLng.contains(lng.lo)) {
+        if (intersectsLngEdge(a, b, lat, lng.lo)) {
           return true;
         }
       }
-      if (edgeLng.contains(lng.hi())) {
-        if (intersectsLngEdge(a, b, lat, lng.hi())) {
+      if (edgeLng.contains(lng.hi)) {
+        if (intersectsLngEdge(a, b, lat, lng.hi)) {
           return true;
         }
       }
-      if (intersectsLatEdge(a, b, lat.lo(), lng)) {
+      if (intersectsLatEdge(a, b, lat.lo, lng)) {
         return true;
       }
-      if (intersectsLatEdge(a, b, lat.hi(), lng)) {
+      if (intersectsLatEdge(a, b, lat.hi, lng)) {
         return true;
       }
     }
@@ -436,7 +441,7 @@ S2LatLngRect({this.lat, this.lng});
    * Return true if and only if the interior of this rectangle intersects any
    * point (including the boundary) of the given other rectangle.
    */
-  boolean interiorIntersects(S2LatLngRect other) {
+  bool interiorIntersects(S2LatLngRect other) {
     return (lat.interiorIntersects(other.lat) && lng
       .interiorIntersects(other.lng));
   }
@@ -467,7 +472,7 @@ S2LatLngRect({this.lat, this.lng});
    */
   S2LatLngRect expanded(S2LatLng margin) {
     // assert (margin.lat.radians >= 0 && margin.lng.radians >= 0);
-    if (isEmpty()) {
+    if (isEmpty) {
       return this;
     }
     return new S2LatLngRect(lat.expanded(margin.lat.radians).intersection(
@@ -491,7 +496,7 @@ S2LatLngRect({this.lat, this.lng});
   S2LatLngRect intersection(S2LatLngRect other) {
     R1Interval intersectLat = lat.intersection(other.lat);
     S1Interval intersectLng = lng.intersection(other.lng);
-    if (intersectLat.isEmpty() || intersectLng.isEmpty()) {
+    if (intersectLat.isEmpty || intersectLng.isEmpty) {
       // The lat/lng ranges must either be both empty or both non-empty.
       return empty();
     }
@@ -524,18 +529,18 @@ S2LatLngRect({this.lat, this.lng});
 
   /** Return the surface area of this rectangle on the unit sphere. */
   double area() {
-    if (isEmpty()) {
+    if (isEmpty) {
       return 0;
     }
 
     // This is the size difference of the two spherical caps, multiplied by
     // the longitude ratio.
-    return lng().getLength() * Math.abs(Math.sin(latHi().radians) - Math.sin(latLo().radians));
+    return lng().getLength() * abs(sin(latHi().radians) - sin(latLo().radians));
   }
 
   /** Return true if two rectangles contains the same set of points. */
   @Override
-  boolean equals(Object that) {
+  bool equals(Object that) {
     if (!(that instanceof S2LatLngRect)) {
       return false;
     }
@@ -548,12 +553,12 @@ S2LatLngRect({this.lat, this.lng});
    * are the same up to the given tolerance (see r1interval.h and s1interval.h
    * for details).
    */
-  boolean approxEquals(S2LatLngRect other, double maxError) {
+  bool approxEquals(S2LatLngRect other, double maxError) {
     return (lat.approxEquals(other.lat, maxError) && lng.approxEquals(
       other.lng, maxError));
   }
 
-  boolean approxEquals(S2LatLngRect other) {
+  bool approxEquals(S2LatLngRect other) {
     return approxEquals(other, 1e-15);
   }
 
@@ -569,7 +574,7 @@ S2LatLngRect({this.lat, this.lng});
 
   @Override
   S2Region clone() {
-    return new S2LatLngRect(this.lo(), this.hi());
+    return new S2LatLngRect(this.lo, this.hi);
   }
 
   @Override
@@ -578,18 +583,18 @@ S2LatLngRect({this.lat, this.lng});
     // through the center of the lat-long rectangle and one whose axis
     // is the north or south pole. We return the smaller of the two caps.
 
-    if (isEmpty()) {
+    if (isEmpty) {
       return S2Cap.empty();
     }
 
     double poleZ, poleAngle;
-    if (lat.lo() + lat.hi() < 0) {
+    if (lat.lo + lat.hi < 0) {
       // South pole axis yields smaller cap.
       poleZ = -1;
-      poleAngle = S2.M_PI_2 + lat.hi();
+      poleAngle = PI_2 + lat.hi;
     } else {
       poleZ = 1;
-      poleAngle = S2.M_PI_2 - lat.lo();
+      poleAngle = PI_2 - lat.lo;
     }
     S2Cap poleCap = S2Cap.fromAxisAngle(new S2Point(0, 0, poleZ), S1Angle
       .radians(poleAngle));
@@ -598,9 +603,9 @@ S2LatLngRect({this.lat, this.lng});
     // maximum cap size is achieved at one of the rectangle vertices. For
     // rectangles that are larger than 180 degrees, we punt and always return a
     // bounding cap centered at one of the two poles.
-    double lngSpan = lng.hi() - lng.lo();
-    if (Math.IEEEremainder(lngSpan, 2 * S2.M_PI) >= 0) {
-      if (lngSpan < 2 * S2.M_PI) {
+    double lngSpan = lng.hi - lng.lo;
+    if (IEEEremainder(lngSpan, 2 * PI) >= 0) {
+      if (lngSpan < 2 * PI) {
         S2Cap midCap = S2Cap.fromAxisAngle(getCenter().toPoint(), S1Angle
           .radians(0));
         for (int k = 0; k < 4; ++k) {
@@ -620,7 +625,7 @@ S2LatLngRect({this.lat, this.lng});
   }
 
   @Override
-  boolean contains(S2Cell cell) {
+  bool contains(S2Cell cell) {
     // A latitude-longitude rectangle contains a cell if and only if it contains
     // the cell's bounding rectangle. (This is an exact test.)
     return contains(cell.getRectBound());
@@ -634,33 +639,33 @@ S2LatLngRect({this.lat, this.lng});
    * goes up as the cells get smaller.
    */
   @Override
-  boolean mayIntersect(S2Cell cell) {
+  bool mayIntersect(S2Cell cell) {
     // This test is cheap but is NOT exact (see s2latlngrect.h).
     return intersects(cell.getRectBound());
   }
 
   /** The point 'p' does not need to be normalized. */
-  boolean contains(S2Point p) {
+  bool contains(S2Point p) {
     return contains(new S2LatLng(p));
   }
 
   /**
    * Return true if the edge AB intersects the given edge of constant longitude.
    */
-  private static boolean intersectsLngEdge(S2Point a, S2Point b,
+  private static bool intersectsLngEdge(S2Point a, S2Point b,
       R1Interval lat, double lng) {
     // Return true if the segment AB intersects the given edge of constant
     // longitude. The nice thing about edges of constant longitude is that
     // they are straight lines on the sphere (geodesics).
 
-    return S2.simpleCrossing(a, b, S2LatLng.fromRadians(lat.lo(), lng)
-      .toPoint(), S2LatLng.fromRadians(lat.hi(), lng).toPoint());
+    return S2.simpleCrossing(a, b, S2LatLng.fromRadians(lat.lo, lng)
+      .toPoint(), S2LatLng.fromRadians(lat.hi, lng).toPoint());
   }
 
   /**
    * Return true if the edge AB intersects the given edge of constant latitude.
    */
-  private static boolean intersectsLatEdge(S2Point a, S2Point b, double lat,
+  private static bool intersectsLatEdge(S2Point a, S2Point b, double lat,
       S1Interval lng) {
     // Return true if the segment AB intersects the given edge of constant
     // latitude. Unfortunately, lines of constant latitude are curves on
@@ -681,14 +686,14 @@ S2LatLngRect({this.lat, this.lng});
 
     // Compute the angle "theta" from the x-axis (in the x-y plane defined
     // above) where the great circle intersects the given line of latitude.
-    double sinLat = Math.sin(lat);
-    if (Math.abs(sinLat) >= x.z) {
+    double sinLat = sin(lat);
+    if (abs(sinLat) >= x.z) {
       return false; // The great circle does not reach the given latitude.
     }
     // assert (x.z > 0);
     double cosTheta = sinLat / x.z;
-    double sinTheta = Math.sqrt(1 - cosTheta * cosTheta);
-    double theta = Math.atan2(sinTheta, cosTheta);
+    double sinTheta = sqrt(1 - cosTheta * cosTheta);
+    double theta = atan2(sinTheta, cosTheta);
 
     // The candidate intersection points are located +/- theta in the x-y
     // plane. For an intersection to be valid, we need to check that the
@@ -696,21 +701,21 @@ S2LatLngRect({this.lat, this.lng});
     // also that it is contained within the given longitude interval "lng".
 
     // Compute the range of theta values spanned by the edge AB.
-    S1Interval abTheta = S1Interval.fromPointPair(Math.atan2(
-      a.dotProd(y), a.dotProd(x)), Math.atan2(b.dotProd(y), b.dotProd(x)));
+    S1Interval abTheta = S1Interval.fromPointPair(atan2(
+      a.dotProd(y), a.dotProd(x)), atan2(b.dotProd(y), b.dotProd(x)));
 
     if (abTheta.contains(theta)) {
       // Check if the intersection point is also in the given "lng" interval.
       S2Point isect = S2Point.add(S2Point.mul(x, cosTheta), S2Point.mul(y,
         sinTheta));
-      if (lng.contains(Math.atan2(isect.y, isect.x))) {
+      if (lng.contains(atan2(isect.y, isect.x))) {
         return true;
       }
     }
     if (abTheta.contains(-theta)) {
       // Check if the intersection point is also in the given "lng" interval.
       S2Point intersection = S2Point.sub(S2Point.mul(x, cosTheta), S2Point.mul(y, sinTheta));
-      if (lng.contains(Math.atan2(intersection.y, intersection.x))) {
+      if (lng.contains(atan2(intersection.y, intersection.x))) {
         return true;
       }
     }

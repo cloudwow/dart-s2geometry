@@ -17,7 +17,7 @@
 // Jan Boon <kaetemi@no-break.space>
 
 import 'dart:math';
-
+import 'constants.dart';
 import 's1angle.dart';
 import 's2point.dart';
 export 's2point.dart';
@@ -62,5 +62,27 @@ class S2LatLng {
     double theta = lng.radians;
     double cosphi = cos(phi);
     return S2Point(cos(theta) * cosphi, sin(theta) * cosphi, sin(phi));
+  }
+
+  S2LatLng mul(final double m) {
+    // TODO(dbeaumont): Maybe check that m >= 0 ?
+    return S2LatLng.fromRadians(_coords.x * m, _coords.y * m);
+  }
+
+  /**
+   * Returns a new S2LatLng based on this instance for which {@link #isValid()}
+   * will be {@code true}.
+   * <ul>
+   * <li>Latitude is clipped to the range {@code [-90, 90]}
+   * <li>Longitude is normalized to be in the range {@code [-180, 180]}
+   * </ul>
+   * <p>If the current point is valid then the returned point will have the same
+   * coordinates.
+   */
+  S2LatLng get normalized {
+    // drem(x, 2 * S2.M_PI) reduces its argument to the range
+    // [-S2.M_PI, S2.M_PI] inclusive, which is what we want here.
+    return new S2LatLng.fromRadians(
+        max(-PI_2, min(PI_2, lat.radians)), lng.radians.remainder(2 * PI));
   }
 }
