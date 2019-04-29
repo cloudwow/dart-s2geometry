@@ -39,8 +39,8 @@ const int _kLookupBits = 4;
 Uint16List _lookupPos = new Uint16List(1 << (2 * _kLookupBits + 2));
 Uint16List _lookupIJ = new Uint16List(1 << (2 * _kLookupBits + 2));
 
-void _initLookupCell(int level, int i, int j, int origOrientation, int pos,
-    int orientation) {
+void _initLookupCell(
+    int level, int i, int j, int origOrientation, int pos, int orientation) {
   if (level == _kLookupBits) {
     int ij = (i << _kLookupBits) + j;
     _lookupPos[(ij << 2) + origOrientation] = (pos << 2) + orientation;
@@ -82,7 +82,6 @@ int _lsbForLevel(int level) {
 // need s2sphere.RegionCoverer
 
 class S2CellId {
-
   int _id = 0;
 
   S2CellId(this._id);
@@ -182,7 +181,6 @@ class S2CellId {
     return S2CellId(newId);
   }
 
-
   S2CellId prev([int level]) {
     level = level ?? this.level;
     int newId = 0;
@@ -232,17 +230,16 @@ class S2CellId {
     return result;
   }
 
-
   // lsbForLevel returns the lowest-numbered bit that is on for cells at the given level.
   // func lsbForLevel(level int) uint64 { return 1 << uint64(2*(maxLevel-level)) }
 
   // Parent returns the cell at the given level, which must be no greater than the current level.
   S2CellId parent([int level]) {
-     int newLsb = lowestOnBitForLevel(level);
-     return new S2CellId((id & -newLsb) | newLsb);
+    int newLsb = lowestOnBitForLevel(level);
+    return new S2CellId((id & -newLsb) | newLsb);
 
-  //  int shift = (30 - level) * 2;
-  //   return new S2CellId((_id >> shift) << shift);
+    //  int shift = (30 - level) * 2;
+    //   return new S2CellId((_id >> shift) << shift);
   }
 
 // Parent returns the cell at the given level, which must be no greater than the current level.
@@ -260,7 +257,6 @@ class S2CellId {
   int lowestOnBitForLevel(int level) {
     return 1 << (2 * (_kMaxLevel - level));
   }
-
 
   // isFace returns whether this is a top-level (face) cell.
   bool isFace() {
@@ -300,15 +296,15 @@ class S2CellId {
     // The arithmetic below is designed to avoid 32-bit integer overflows.
     assert(0 == _kMaxSize % 2);
     double u =
-    max(-kLimit, min(kLimit, kScale * (2 * (i - _kMaxSize / 2) + 1)));
+        max(-kLimit, min(kLimit, kScale * (2 * (i - _kMaxSize / 2) + 1)));
     double v =
-    max(-kLimit, min(kLimit, kScale * (2 * (j - _kMaxSize / 2) + 1)));
+        max(-kLimit, min(kLimit, kScale * (2 * (j - _kMaxSize / 2) + 1)));
 
     // Find the leaf cell coordinates on the adjacent face, and convert
     // them to a cell id at the appropriate level.
     S2FaceUV faceUV = xyzToFaceUV(faceUVToXYZ(face, new R2Point(u, v)));
     _id = new S2CellId.fromFaceIJ(faceUV.face, stToIJ(0.5 * (faceUV.u + 1)),
-        stToIJ(0.5 * (faceUV.v + 1)))
+            stToIJ(0.5 * (faceUV.v + 1)))
         ._id;
   }
 
@@ -323,8 +319,8 @@ class S2CellId {
     return (_id >> 61) & 7;
   }
 
-  int toFaceIJOrientation(MutableInteger pi, MutableInteger pj,
-      MutableInteger orientation) {
+  int toFaceIJOrientation(
+      MutableInteger pi, MutableInteger pj, MutableInteger orientation) {
     // System.out.println("Entering toFaceIjorientation");
     int face = this.face;
     int bits = (face & _kSwapMask);
@@ -373,15 +369,14 @@ class S2CellId {
   int getBits1(MutableInteger i, MutableInteger j, int k, int bits) {
     final int nbits = (k == 7) ? (_kMaxLevel - 7 * _kLookupBits) : _kLookupBits;
 
-    bits += (((id >> (k * 2 * _kLookupBits + 1)) &
-    ((1 << (2 * nbits)) - 1))) << 2;
+    bits +=
+        (((id >> (k * 2 * _kLookupBits + 1)) & ((1 << (2 * nbits)) - 1))) << 2;
     /*
      * System.out.println("id is: " + id_); System.out.println("bits is " +
      * bits); System.out.println("lookup_ij[bits] is " + lookup_ij[bits]);
      */
     bits = _lookupIJ[bits];
-    i.value = (i.value
-        + ((bits >> (_kLookupBits + 2)) << (k * _kLookupBits)));
+    i.value = (i.value + ((bits >> (_kLookupBits + 2)) << (k * _kLookupBits)));
     /*
      * System.out.println("left is " + ((bits >> 2) & ((1 << kLookupBits) -
      * 1))); System.out.println("right is " + (k * kLookupBits));
@@ -389,8 +384,8 @@ class S2CellId {
      * is: " + ((((bits >> 2) & ((1 << kLookupBits) - 1))) << (k *
      * kLookupBits)));
      */
-    j.value = (j.value
-        + ((((bits >> 2) & ((1 << _kLookupBits) - 1))) << (k * _kLookupBits)));
+    j.value = (j.value +
+        ((((bits >> 2) & ((1 << _kLookupBits) - 1))) << (k * _kLookupBits)));
     bits &= (_kSwapMask | _kInvertMask);
     return bits;
   }
@@ -419,8 +414,7 @@ class S2CellId {
     MutableInteger j = new MutableInteger(0);
     int face = toFaceIJOrientation(i, j, null);
     // System.out.println("i= " + i.intValue() + " j = " + j.intValue());
-    int delta = isLeaf ? 1 : (((i.value ^ ((id) >> 2)) & 1) != 0)
-        ? 2 : 0;
+    int delta = isLeaf ? 1 : (((i.value ^ ((id) >> 2)) & 1) != 0) ? 2 : 0;
     int si = (i.value << 1) + delta - _kMaxSize;
     int ti = (j.value << 1) + delta - _kMaxSize;
     return faceSiTiToXYZ(face, si, ti);
@@ -444,7 +438,6 @@ class S2CellId {
       return (1.0 / 3.0) * (1 - (1 - s) * (1 - s));
     }
   }
-
 
   /**
    * Convert (face, u, v) coordinates to a direction vector (not necessarily
@@ -503,7 +496,6 @@ class S2CellId {
     return _id;
   }
 
-
   @override
   int get hashCode {
     return _id;
@@ -531,5 +523,9 @@ class S2CellId {
       return _id > cellId._id;
     }
     return _id < 0;
+  }
+
+  String toString() {
+    return "s2cellId[level: $level, id$id]";
   }
 }

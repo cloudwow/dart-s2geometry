@@ -50,6 +50,10 @@ class S2Point {
     return new S2Point(x.abs(), y.abs(), z.abs());
   }
 
+
+  static S2Point negative(S2Point p) {
+    return new S2Point(-p.x, -p.y, -p.z);
+  }
   int largestAbsComponent() {
     S2Point temp = abs();
     return temp[0] > temp[1]
@@ -118,5 +122,10 @@ class S2Point {
 
   static S2Point minus(S2Point p1, S2Point p2) {
     return sub(p1, p2);
+  }
+
+  @override
+  String toString() {
+    return "$x,$y,$z";
   }
 }

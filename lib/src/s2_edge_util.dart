@@ -46,7 +46,7 @@ class S2EdgeUtil {
     // distances and convert the result to an angle. Again, this method is
     // accurate for small but not large distances (approaching Pi).
 
-    double linearDist2 = min(S2Point.minus(x, a).norm2(), S2Point.minus(x, b).norm2());
+    double linearDist2 = min(S2Point.minus(x, a).norm2, S2Point.minus(x, b).norm2);
     return S1Angle.fromRadians(2 * asin(min(1.0, 0.5 * sqrt(linearDist2))));
   }
 }

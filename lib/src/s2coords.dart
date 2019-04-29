@@ -36,20 +36,6 @@ const int kLimitIJ = 1 << kMaxCellLevel; // == S2CellId::kMaxSize
 // values is [0..kMaxSiTi].
 const int kMaxSiTi = 1 << (kMaxCellLevel + 1);
 
-double stToUV(double s) {
-  if (s >= 0.5)
-    return (1.0 / 3.0) * (4 * s * s - 1);
-  else
-    return (1.0 / 3.0) * (1 - 4 * (1 - s) * (1 - s));
-}
-
-double uvToST(double u) {
-  if (u >= 0)
-    return 0.5 * sqrt(1 + 3 * u);
-  else
-    return 1 - 0.5 * sqrt(1 - 3 * u);
-}
-
 double ijToSTMin(int i) {
   assert(i >= 0 && i <= kLimitIJ);
   return (1.0 / kLimitIJ) * i;
@@ -67,6 +53,27 @@ double siTiToST(int si) {
 int stToSiTi(double s) {
   // kMaxSiTi == 2^31, so the result doesn't fit in an int32 when s == 1.
   return (s * kMaxSiTi).round();
+}
+
+/**
+   * Convert (face, u, v) coordinates to a direction vector (not necessarily
+   * unit length).
+   */
+S2Point faceUvToXyz(int face, double u, double v) {
+  switch (face) {
+    case 0:
+      return new S2Point(1, u, v);
+    case 1:
+      return new S2Point(-u, 1, v);
+    case 2:
+      return new S2Point(-u, -v, 1);
+    case 3:
+      return new S2Point(-1, -v, -u);
+    case 4:
+      return new S2Point(v, -1, -u);
+    default:
+      return new S2Point(v, u, -1);
+  }
 }
 
 S2Point faceUVToXYZ(int face, R2Point uv) {
@@ -127,8 +134,13 @@ int getFace(S2Point p) {
 class S2FaceUV {
   int face;
   R2Point uv;
-  double get u { return uv.u; }
-  double get v { return uv.v; }
+  double get u {
+    return uv.u;
+  }
+
+  double get v {
+    return uv.v;
+  }
 }
 
 S2FaceUV xyzToFaceUV(S2Point p) {
@@ -186,11 +198,37 @@ S2Point getNorm(int face) {
 }
 
 S2Point getUAxis(int face) {
-  return getUVWAxis(face, 0);
+  switch (face) {
+    case 0:
+      return new S2Point(0, 1, 0);
+    case 1:
+      return new S2Point(-1, 0, 0);
+    case 2:
+      return new S2Point(-1, 0, 0);
+    case 3:
+      return new S2Point(0, 0, -1);
+    case 4:
+      return new S2Point(0, 0, -1);
+    default:
+      return new S2Point(0, 1, 0);
+  }
 }
 
 S2Point getVAxis(int face) {
-  return getUVWAxis(face, 1);
+  switch (face) {
+    case 0:
+      return new S2Point(0, 0, 1);
+    case 1:
+      return new S2Point(0, 0, 1);
+    case 2:
+      return new S2Point(0, -1, 0);
+    case 3:
+      return new S2Point(0, -1, 0);
+    case 4:
+      return new S2Point(1, 0, 0);
+    default:
+      return new S2Point(1, 0, 0);
+  }
 }
 
 S2Point getUVWAxis(int face, int axis) {

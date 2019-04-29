@@ -85,4 +85,9 @@ class S2LatLng {
     return new S2LatLng.fromRadians(
         max(-PI_2, min(PI_2, lat.radians)), lng.radians.remainder(2 * PI));
   }
+
+  @override
+  String toString() {
+    return "${lat.degrees},${lng.degrees}";
+  }
 }
