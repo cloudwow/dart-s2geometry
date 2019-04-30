@@ -2,6 +2,9 @@
 	"folders": [
 		{
 			"path": "."
+		},
+		{
+			"path": "/home/zenbulogy/workspace/petgame/src/main/app/petgame"
 		}
 	],
 	"settings": {}

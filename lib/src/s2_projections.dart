@@ -25,7 +25,7 @@
  *  We have implemented three different projections from cell-space (s,t) to
  * cube-space (u,v): linear, quadratic, and tangent. They have the following
  * tradeoffs:
- *
+ 
  *  Linear - This is the fastest transformation, but also produces the least
  * uniform cell sizes. Cell areas vary by a factor of about 5.2, with the
  * largest cells at the center of each face and the smallest cells in the
@@ -69,6 +69,7 @@ import 's2cell_id.dart';
 import 'dart:math';
 import 'constants.dart';
 import 's2latlng.dart';
+import 'r2_vector.dart';
 import 's2coords.dart';
 import 's2.dart';
 import 'mutableinteger.dart';
@@ -77,28 +78,22 @@ import 's1_interval.dart';
 import 's2_lat_lng_rect.dart';
 
 enum Projections {
-    S2_LINEAR_PROJECTION, S2_TAN_PROJECTION, S2_QUADRATIC_PROJECTION
-  }
+  S2_LINEAR_PROJECTION,
+  S2_TAN_PROJECTION,
+  S2_QUADRATIC_PROJECTION
+}
 
 class S2Projections {
-  
-  static final Projections S2_PROJECTION = Projections.S2_QUADRATIC_PROJECTION;
-
   // All of the values below were obtained by a combination of hand analysis and
   // matica. In general, S2_TAN_PROJECTION produces the most uniform
   // shapes and sizes of cells, S2_LINEAR_PROJECTION is considerably worse, and
   // S2_QUADRATIC_PROJECTION is somewhere in between (but generally closer to
   // the tangent projection than the linear one).
 
-
   // This is the maximum edge aspect ratio over all cells at any level, where
   // the edge aspect ratio of a cell is defined as the ratio of its longest
   // edge length to its shortest edge length.
-  static final double MAX_EDGE_ASPECT =
-      S2_PROJECTION == Projections.S2_LINEAR_PROJECTION ? SQRT2 : // 1.414
-      S2_PROJECTION == Projections.S2_TAN_PROJECTION ? SQRT2 : // 1.414
-      S2_PROJECTION == Projections.S2_QUADRATIC_PROJECTION ? 1.44261527445268292 : // 1.443
-      0;
+  static final double MAX_EDGE_ASPECT = 1.44261527445268292;
 
   // This is the maximum diagonal aspect ratio over all cells at any level,
   // where the diagonal aspect ratio of a cell is defined as the ratio of its
@@ -106,51 +101,20 @@ class S2Projections {
   static final double MAX_DIAG_ASPECT = sqrt(3); // 1.732
 
   static double stToUV(double s) {
-    switch (S2_PROJECTION) {
-      case Projections.S2_LINEAR_PROJECTION:
-        return s;
-      case Projections.S2_TAN_PROJECTION:
-        // Unfortunately, tan(M_PI_4) is slightly less than 1.0. This isn't due
-        // to
-        // a flaw in the implementation of tan(), it's because the derivative of
-        // tan(x) at x=pi/4 is 2, and it happens that the two adjacent floating
-        // point numbers on either side of the infinite-precision value of pi/4
-        // have
-        // tangents that are slightly below and slightly above 1.0 when rounded
-        // to
-        // the nearest double-precision result.
-        s = tan(PI_4 * s);
-        return s + (1.0 / (1 << 53)) * s;
-      case Projections.S2_QUADRATIC_PROJECTION:
-        if (s >= 0) {
-          return (1 / 3.0) * ((1 + s) * (1 + s) - 1);
-        } else {
-          return (1 / 3.0) * (1 - (1 - s) * (1 - s));
-        }
-        break;
-      default:
-        throw new Exception("Invalid value for S2_PROJECTION");
+    if (s >= 0) {
+      return (1 / 3.0) * ((1 + s) * (1 + s) - 1);
+    } else {
+      return (1 / 3.0) * (1 - (1 - s) * (1 - s));
     }
   }
 
   static double uvToST(double u) {
-    switch (S2_PROJECTION) {
-      case Projections.S2_LINEAR_PROJECTION:
-        return u;
-      case Projections.S2_TAN_PROJECTION:
-        return (4 * PI) * atan(u);
-      case Projections.S2_QUADRATIC_PROJECTION:
-        if (u >= 0) {
-          return sqrt(1 + 3 * u) - 1;
-        } else {
-          return 1 - sqrt(1 - 3 * u);
-        }
-        break;
-      default:
-        throw new Exception("Invalid value for S2_PROJECTION");
+    if (u >= 0) {
+      return sqrt(1 + 3 * u) - 1;
+    } else {
+      return 1 - sqrt(1 - 3 * u);
     }
   }
-
 
   /**
    * Convert (face, u, v) coordinates to a direction vector (not necessarily
@@ -245,7 +209,59 @@ class S2Projections {
     }
   }
 
-  // Don't instantiate
-  S2Projections() {
+   static int xyzToFace(S2Point p) {
+    int face = p.largestAbsComponent();
+    if (p.get(face) < 0) {
+      face += 3;
+    }
+    return face;
   }
+
+   static R2Vector faceXyzToUv(int face, S2Point p) {
+    if (face < 3) {
+      if (p.get(face) <= 0) {
+        return null;
+      }
+    } else {
+      if (p.get(face - 3) >= 0) {
+        return null;
+      }
+    }
+    return validFaceXyzToUv(face, p);
+  }
+  
+   static R2Vector validFaceXyzToUv(int face, S2Point p) {
+    // assert (p.dotProd(faceUvToXyz(face, 0, 0)) > 0);
+    double pu;
+    double pv;
+    switch (face) {
+      case 0:
+        pu = p.y / p.x;
+        pv = p.z / p.x;
+        break;
+      case 1:
+        pu = -p.x / p.y;
+        pv = p.z / p.y;
+        break;
+      case 2:
+        pu = -p.x / p.z;
+        pv = -p.y / p.z;
+        break;
+      case 3:
+        pu = p.z / p.x;
+        pv = p.y / p.x;
+        break;
+      case 4:
+        pu = p.z / p.y;
+        pv = -p.x / p.y;
+        break;
+      default:
+        pu = -p.y / p.z;
+        pv = -p.x / p.z;
+        break;
+    }
+    return new R2Vector(x: pu,y: pv);
+  }
+
+
 }

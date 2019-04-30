@@ -20,17 +20,18 @@
  * more expensive representation.
  *
  */
+import 's1angle.dart';
 import 's2cell_id.dart';
 import 'dart:math';
 import 'constants.dart';
 import 's2latlng.dart';
-import 's2coords.dart';
 import 's2.dart';
 import 'mutableinteger.dart';
 import 'r1_interval.dart';
 import 's1_interval.dart';
 import 's2_lat_lng_rect.dart';
 import 's2_projections.dart';
+
 class S2Cell {
   final int MAX_CELL_SIZE = 1 << MAX_LEVEL;
 
@@ -68,7 +69,8 @@ class S2Cell {
    */
   S2Point getVertexRaw(int k) {
     // Vertices are returned in the order SW, SE, NE, NW.
-    return S2Projections.faceUvToXyz(face, uv[0][(k >> 1) ^ (k & 1)], uv[1][k >> 1]);
+    return S2Projections.faceUvToXyz(
+        face, uv[0][(k >> 1) ^ (k & 1)], uv[1][k >> 1]);
   }
 
   S2Point getEdge(int k) {
@@ -82,7 +84,8 @@ class S2Cell {
       case 1:
         return S2Projections.getUNorm(face, uv[0][1]); // East
       case 2:
-        return S2Point.negative(S2Projections.getVNorm(face, uv[1][1])); // North
+        return S2Point.negative(
+            S2Projections.getVNorm(face, uv[1][1])); // North
       default:
         return S2Point.negative(S2Projections.getUNorm(face, uv[0][0])); // West
     }
@@ -118,13 +121,24 @@ class S2Cell {
       // coordinate based on the axis direction and the cell's (u,v) quadrant.
       double u = uv[0][0] + uv[0][1];
       double v = uv[1][0] + uv[1][1];
-      int i = getUAxis(face).z == 0 ? (u < 0 ? 1 : 0) : (u > 0 ? 1 : 0);
-      int j = getVAxis(face).z == 0 ? (v < 0 ? 1 : 0) : (v > 0 ? 1 : 0);
+      int i = S2Projections.getUAxis(face).z == 0
+          ? (u < 0 ? 1 : 0)
+          : (u > 0 ? 1 : 0);
+      int j = S2Projections.getVAxis(face).z == 0
+          ? (v < 0 ? 1 : 0)
+          : (v > 0 ? 1 : 0);
 
       R1Interval lat = R1Interval.fromPointPair(
           getLatitude(i, j), getLatitude(1 - i, 1 - j));
-      lat = lat.expanded(MAX_ERROR).intersection(S2LatLngRect.fullLat());
+      print("getRectBound lat interval: $lat");
+      var fullLatRect = S2LatLngRect.fullLat();
+      lat = lat.expanded(MAX_ERROR).intersection(fullLatRect);
+
+      print("getRectBound lat interval: $lat");
+      print("lat hi degs: ${S1Angle.fromRadians(lat.hi).degrees}");
       if (lat.lo == -PI_2 || lat.hi == PI_2) {
+        print("getRectBound done 1");
+
         return new S2LatLngRect(lat: lat, lng: S1Interval.full());
       }
       S1Interval lng = S1Interval.fromPointPair(
@@ -164,26 +178,27 @@ class S2Cell {
 
   void init(S2CellId id) {
     cellId = id;
-    int MAX_CELL_SIZE = 1 << kMaxCellLevel;
+    int MAX_CELL_SIZE = 1 << MAX_LEVEL;
     List<MutableInteger> ij = [MutableInteger(0), MutableInteger(0)];
     MutableInteger mOrientation = MutableInteger(0);
 
     face = id.toFaceIJOrientation(ij[0], ij[1], mOrientation);
     print("i: ${ij[0].value}, j: ${ij[1].value}");
     print("herpcell id ${cellId.id}");
-    print("derpcell id ${S2CellId.fromFaceIJ(face, ij[0].value, ij[1].value).id}");
-     
+    print(
+        "derpcell id ${S2CellId.fromFaceIJ(face, ij[0].value, ij[1].value).id}");
+
     orientation = mOrientation.value; // Compress int to a int.
     uv = List<List<double>>();
 
     level = id.level;
-    int cellSize = 1 << (kMaxCellLevel - level);
-     print("cellSize:$cellSize");
-     
+    int cellSize = 1 << (MAX_LEVEL - level);
+    print("cellSize:$cellSize");
+
     for (int d = 0; d < 2; ++d) {
       // Compute the cell bounds in scaled (i,j) coordinates.
-      int sijLo = (ij[d].value & -cellSize) * 2 - MAX_CELL_SIZE;
-      int sijHi = sijLo + cellSize * 2;
+      int sijLo = ij[d].value  -(cellSize/2).floor();// * 2 - MAX_CELL_SIZE;
+      int sijHi = sijLo + cellSize ;
       print("sijLo:$sijLo, sijHi:$sijHi");
       uv.add(List<double>());
       uv[d].add(S2Projections.stToUV((1.0 / MAX_CELL_SIZE) * sijLo));
@@ -195,6 +210,7 @@ class S2Cell {
 
   double getLatitude(int i, int j) {
     S2Point p = S2Projections.faceUvToXyz(face, uv[0][i], uv[1][j]);
+    print("sdflsadf ${S2LatLng.fromPoint(p)}");
     return atan2(p.z, sqrt(p.x * p.x + p.y * p.y));
   }
 

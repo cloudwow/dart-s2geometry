@@ -8,4 +8,5 @@ export 'src/s2latlng.dart';
 export 'src/s2coords.dart';
 export 'src/s2_lat_lng_rect.dart';
 export 'src/mutableinteger.dart';
-export 'src/constants.dart';
+export 'src/constants.dart'; 
+export 'src/s2_projections.dart';

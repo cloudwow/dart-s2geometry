@@ -128,4 +128,7 @@ class S2Point {
   String toString() {
     return "$x,$y,$z";
   }
+  double get(int axis) {
+    return (axis == 0) ? x : (axis == 1) ? y : z;
+  }
 }

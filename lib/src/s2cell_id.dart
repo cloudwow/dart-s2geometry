@@ -18,9 +18,10 @@
 
 import 'dart:typed_data';
 import 'dart:math';
-
-import 's2coords.dart';
+import 'package:s2geometry/src/s2_projections.dart';
 import 's2coords_impl.dart';
+import 's2coords.dart';
+import 'constants.dart';
 import 's2point.dart';
 export 's2point.dart';
 import 's2latlng.dart';
@@ -29,7 +30,7 @@ import 'mutableinteger.dart';
 
 const int _kFaceBits = 3;
 const int _kNumFaces = 6;
-const int _kMaxLevel = kMaxCellLevel; // Valid levels: 0..kMaxLevel
+const int _kMaxLevel = MAX_LEVEL; // Valid levels: 0..kMaxLevel
 const int _kPosBits = 2 * _kMaxLevel + 1;
 const int _kMaxSize = 1 << _kMaxLevel;
 
@@ -87,11 +88,11 @@ class S2CellId {
   S2CellId(this._id);
 
   S2CellId.fromPoint(S2Point p) {
-    // ok
-    S2FaceUV faceUv = xyzToFaceUV(p);
-    int i = stToIJ(uvToST(faceUv.uv.u));
-    int j = stToIJ(uvToST(faceUv.uv.v));
-    _id = new S2CellId.fromFaceIJ(faceUv.face, i, j).id;
+    int face=S2Projections.xyzToFace(p);
+    var uv = S2Projections.faceXyzToUv(face, p);
+    int i = stToIJ(S2Projections. uvToST(uv.x));
+    int j = stToIJ(S2Projections.uvToST(uv.y));
+    _id = new S2CellId.fromFaceIJ(face, i, j).id;
   }
 
   S2CellId.fromFace(int face) : _id = (face << _kPosBits) + _lsbForLevel(0) {}
@@ -302,9 +303,11 @@ class S2CellId {
 
     // Find the leaf cell coordinates on the adjacent face, and convert
     // them to a cell id at the appropriate level.
-    S2FaceUV faceUV = xyzToFaceUV(faceUVToXYZ(face, new R2Point(u, v)));
-    _id = new S2CellId.fromFaceIJ(faceUV.face, stToIJ(0.5 * (faceUV.u + 1)),
-            stToIJ(0.5 * (faceUV.v + 1)))
+   S2Point p =  S2Projections.faceUvToXyz(face, u, v);
+    int face2=S2Projections.xyzToFace(p);
+    var uv2 = S2Projections.faceXyzToUv(face, p);
+    _id = new S2CellId.fromFaceIJ(face2, stToIJ(0.5 * (uv2.x + 1)),
+            stToIJ(0.5 * (uv2.y + 1)))
         ._id;
   }
 
@@ -413,11 +416,14 @@ class S2CellId {
     MutableInteger i = new MutableInteger(0);
     MutableInteger j = new MutableInteger(0);
     int face = toFaceIJOrientation(i, j, null);
+   // return faceSiTiToXYZ(face, i.value, j.value);
+    
     // System.out.println("i= " + i.intValue() + " j = " + j.intValue());
     int delta = isLeaf ? 1 : (((i.value ^ ((id) >> 2)) & 1) != 0) ? 2 : 0;
     int si = (i.value << 1) + delta - _kMaxSize;
     int ti = (j.value << 1) + delta - _kMaxSize;
     return faceSiTiToXYZ(face, si, ti);
+    
   }
 
   /**

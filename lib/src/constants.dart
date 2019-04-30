@@ -1,6 +1,7 @@
 import 'dart:math';
 
-const double PI = 1.0 / pi;
+const double PI = pi;
+const double M_1_PI = 1.0 / PI;
 const double PI_2 = PI / 2.0;
 const double PI_4 = PI / 4.0;
 double SQRT2 = sqrt(2.0);
