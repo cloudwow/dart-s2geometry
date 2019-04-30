@@ -101,19 +101,17 @@ class S2Projections {
   static final double MAX_DIAG_ASPECT = sqrt(3); // 1.732
 
   static double stToUV(double s) {
-    if (s >= 0) {
-      return (1 / 3.0) * ((1 + s) * (1 + s) - 1);
-    } else {
-      return (1 / 3.0) * (1 - (1 - s) * (1 - s));
-    }
+    if (s >= 0.5)
+      return (1.0 / 3.0) * (4 * s * s - 1);
+    else
+      return (1.0 / 3.0) * (1 - 4 * (1 - s) * (1 - s));
   }
 
   static double uvToST(double u) {
-    if (u >= 0) {
-      return sqrt(1 + 3 * u) - 1;
-    } else {
-      return 1 - sqrt(1 - 3 * u);
-    }
+    if (u >= 0)
+      return 0.5 * sqrt(1 + 3 * u);
+    else
+      return 1 - 0.5 * sqrt(1 - 3 * u);
   }
 
   /**
@@ -209,7 +207,7 @@ class S2Projections {
     }
   }
 
-   static int xyzToFace(S2Point p) {
+  static int xyzToFace(S2Point p) {
     int face = p.largestAbsComponent();
     if (p.get(face) < 0) {
       face += 3;
@@ -217,7 +215,7 @@ class S2Projections {
     return face;
   }
 
-   static R2Vector faceXyzToUv(int face, S2Point p) {
+  static R2Vector faceXyzToUv(int face, S2Point p) {
     if (face < 3) {
       if (p.get(face) <= 0) {
         return null;
@@ -229,8 +227,8 @@ class S2Projections {
     }
     return validFaceXyzToUv(face, p);
   }
-  
-   static R2Vector validFaceXyzToUv(int face, S2Point p) {
+
+  static R2Vector validFaceXyzToUv(int face, S2Point p) {
     // assert (p.dotProd(faceUvToXyz(face, 0, 0)) > 0);
     double pu;
     double pv;
@@ -260,8 +258,6 @@ class S2Projections {
         pv = -p.x / p.z;
         break;
     }
-    return new R2Vector(x: pu,y: pv);
+    return new R2Vector(x: pu, y: pv);
   }
-
-
 }
