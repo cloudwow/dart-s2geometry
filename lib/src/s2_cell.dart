@@ -130,15 +130,10 @@ class S2Cell {
 
       R1Interval lat = R1Interval.fromPointPair(
           getLatitude(i, j), getLatitude(1 - i, 1 - j));
-      print("getRectBound lat interval: $lat");
       var fullLatRect = S2LatLngRect.fullLat();
       lat = lat.expanded(MAX_ERROR).intersection(fullLatRect);
 
-      print("getRectBound lat interval: $lat");
-      print("lat hi degs: ${S1Angle.fromRadians(lat.hi).degrees}");
       if (lat.lo == -PI_2 || lat.hi == PI_2) {
-        print("getRectBound done 1");
-
         return new S2LatLngRect(lat: lat, lng: S1Interval.full());
       }
       S1Interval lng = S1Interval.fromPointPair(
@@ -183,23 +178,17 @@ class S2Cell {
     MutableInteger mOrientation = MutableInteger(0);
 
     face = id.toFaceIJOrientation(ij[0], ij[1], mOrientation);
-    print("i: ${ij[0].value}, j: ${ij[1].value}");
-    print("herpcell id ${cellId.id}");
-    print(
-        "derpcell id ${S2CellId.fromFaceIJ(face, ij[0].value, ij[1].value).id}");
 
     orientation = mOrientation.value; // Compress int to a int.
     uv = List<List<double>>();
 
     level = id.level;
     int cellSize = 1 << (MAX_LEVEL - level);
-    print("cellSize:$cellSize");
 
     for (int d = 0; d < 2; ++d) {
       // Compute the cell bounds in scaled (i,j) coordinates.
       int sijLo = ij[d].value  -(cellSize/2).floor();// * 2 - MAX_CELL_SIZE;
       int sijHi = sijLo + cellSize ;
-      print("sijLo:$sijLo, sijHi:$sijHi");
       uv.add(List<double>());
       uv[d].add(S2Projections.stToUV((1.0 / MAX_CELL_SIZE) * sijLo));
       uv[d].add(S2Projections.stToUV((1.0 / MAX_CELL_SIZE) * sijHi));
@@ -210,7 +199,6 @@ class S2Cell {
 
   double getLatitude(int i, int j) {
     S2Point p = S2Projections.faceUvToXyz(face, uv[0][i], uv[1][j]);
-    print("sdflsadf ${S2LatLng.fromPoint(p)}");
     return atan2(p.z, sqrt(p.x * p.x + p.y * p.y));
   }
 
