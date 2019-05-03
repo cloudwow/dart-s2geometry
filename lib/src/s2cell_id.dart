@@ -88,9 +88,9 @@ class S2CellId {
   S2CellId(this._id);
 
   S2CellId.fromPoint(S2Point p) {
-    int face=S2Projections.xyzToFace(p);
+    int face = S2Projections.xyzToFace(p);
     var uv = S2Projections.faceXyzToUv(face, p);
-    int i = stToIJ(S2Projections. uvToST(uv.x));
+    int i = stToIJ(S2Projections.uvToST(uv.x));
     int j = stToIJ(S2Projections.uvToST(uv.y));
     _id = new S2CellId.fromFaceIJ(face, i, j).id;
   }
@@ -303,11 +303,11 @@ class S2CellId {
 
     // Find the leaf cell coordinates on the adjacent face, and convert
     // them to a cell id at the appropriate level.
-   S2Point p =  S2Projections.faceUvToXyz(face, u, v);
-    int face2=S2Projections.xyzToFace(p);
+    S2Point p = S2Projections.faceUvToXyz(face, u, v);
+    int face2 = S2Projections.xyzToFace(p);
     var uv2 = S2Projections.faceXyzToUv(face, p);
-    _id = new S2CellId.fromFaceIJ(face2, stToIJ(0.5 * (uv2.x + 1)),
-            stToIJ(0.5 * (uv2.y + 1)))
+    _id = new S2CellId.fromFaceIJ(
+            face2, stToIJ(0.5 * (uv2.x + 1)), stToIJ(0.5 * (uv2.y + 1)))
         ._id;
   }
 
@@ -383,7 +383,7 @@ class S2CellId {
     /*
      * System.out.println("left is " + ((bits >> 2) & ((1 << kLookupBits) -
      * 1))); System.out.println("right is " + (k * kLookupBits));
-     * System.out.println("j is: " + j.intValue()); System.out.println("addition
+     * System.out.println("j is: " + j.value); System.out.println("addition
      * is: " + ((((bits >> 2) & ((1 << kLookupBits) - 1))) << (k *
      * kLookupBits)));
      */
@@ -416,14 +416,13 @@ class S2CellId {
     MutableInteger i = new MutableInteger(0);
     MutableInteger j = new MutableInteger(0);
     int face = toFaceIJOrientation(i, j, null);
-   // return faceSiTiToXYZ(face, i.value, j.value);
-    
-    // System.out.println("i= " + i.intValue() + " j = " + j.intValue());
+    // return faceSiTiToXYZ(face, i.value, j.value);
+
+    // System.out.println("i= " + i.value + " j = " + j.value);
     int delta = isLeaf ? 1 : (((i.value ^ ((id) >> 2)) & 1) != 0) ? 2 : 0;
     int si = (i.value << 1) + delta - _kMaxSize;
     int ti = (j.value << 1) + delta - _kMaxSize;
     return faceSiTiToXYZ(face, si, ti);
-    
   }
 
   /**
@@ -474,25 +473,30 @@ class S2CellId {
     return (_id & 1) != 0;
   }
 
-/*
-  List<S2CellId> GetEdgeNeighbors() {
-    int i, j;
-    int level = this.level;
-    int size = getSizeIJ(level);
-    int face = toFaceIJOrientation(i, j, nullptr);
+  List<S2CellId> get edgeNeighbors {
+    var neighbors = List<S2CellId>();
+    MutableInteger i = new MutableInteger(0);
+    MutableInteger j = new MutableInteger(0);
 
-    List<S2CellId> neighbors = new List<S2CellId>(4);
-    // Edges 0, 1, 2, 3 are in the down, right, up, left directions.
-    neighbors[0] =
-        new S2CellId.fromFaceIJSame(face, i, j - size, j - size >= 0).parent(level);
-    neighbors[1] =
-        new S2CellId.fromFaceIJSame(face, i + size, j, i + size < _kMaxSize).parent(level);
-    neighbors[2] =
-        new S2CellId.fromFaceIJSame(face, i, j + size, j + size < _kMaxSize).parent(level);
-    neighbors[3] =
-        new S2CellId.fromFaceIJSame(face, i - size, j, i - size >= 0).parent(level);
+    int level = this.level;
+    int size = 1 << (MAX_LEVEL - level);
+    int face = toFaceIJOrientation(i, j, null);
+
+    // Edges 0, 1, 2, 3 are in the S, E, N, W directions.
+    neighbors.add(S2CellId.fromFaceIJSame(
+            face, i.value, j.value - size, j.value - size >= 0)
+        .parent(level));
+    neighbors.add(S2CellId.fromFaceIJSame(
+            face, i.value + size, j.value, i.value + size < MAX_SIZE)
+        .parent(level));
+    neighbors.add(S2CellId.fromFaceIJSame(
+            face, i.value, j.value + size, j.value + size < MAX_SIZE)
+        .parent(level));
+    neighbors.add(S2CellId.fromFaceIJSame(
+            face, i.value - size, j.value, i.value - size >= 0)
+        .parent(level));
     return neighbors;
-  }*/
+  }
 
   int get level {
     return _kMaxLevel - (findLSBSetNonZero64(_id) >> 1);

@@ -16,3 +16,4 @@ const double MAX_ERROR = 1.0 / (1 << 51);
   const double POLE_MIN_LAT =0.615479709  - MAX_ERROR;
   
 const int MAX_LEVEL = 30;
+const int MAX_SIZE = 1 << MAX_LEVEL;
