@@ -102,16 +102,16 @@ class S2Projections {
 
   static double stToUV(double s) {
     if (s >= 0.5)
-      return (1.0 / 3.0) * (4 * s * s - 1);
+      return (1.0 / 3.0) * (4.0  * s * s - 1.0 );
     else
-      return (1.0 / 3.0) * (1 - 4 * (1 - s) * (1 - s));
+      return (1.0 / 3.0) * (1.0  - 4.0  * (1.0 - s) * (1.0  - s));
   }
 
   static double uvToST(double u) {
     if (u >= 0)
-      return 0.5 * sqrt(1 + 3 * u);
+      return 0.5 * sqrt(1.0  + 3.0  * u);
     else
-      return 1 - 0.5 * sqrt(1 - 3 * u);
+      return 1.0  - 0.5 * sqrt(1.0 - 3.0 * u);
   }
 
   /**

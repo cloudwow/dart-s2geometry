@@ -127,7 +127,6 @@ class S2Cell {
       int j = S2Projections.getVAxis(face).z == 0
           ? (v < 0 ? 1 : 0)
           : (v > 0 ? 1 : 0);
-
       R1Interval lat = R1Interval.fromPointPair(
           getLatitude(i, j), getLatitude(1 - i, 1 - j));
       var fullLatRect = S2LatLngRect.fullLat();
@@ -178,21 +177,45 @@ class S2Cell {
     MutableInteger mOrientation = MutableInteger(0);
 
     face = id.toFaceIJOrientation(ij[0], ij[1], mOrientation);
-
+  //  print("i: ${ij[0].value}   j: ${ij[1].value}");
     orientation = mOrientation.value; // Compress int to a int.
     uv = List<List<double>>();
 
     level = id.level;
+ //   print("level: $level");
     int cellSize = 1 << (MAX_LEVEL - level);
-
+ //   print("cellSize: $cellSize");
     for (int d = 0; d < 2; ++d) {
       // Compute the cell bounds in scaled (i,j) coordinates.
-      int sijLo = ij[d].value  -(cellSize/2).floor();// * 2 - MAX_CELL_SIZE;
-      int sijHi = sijLo + cellSize ;
+
+      int sijLo = ij[d].value - (cellSize / 2).floor(); // * 2 - MAX_CELL_SIZE;
+      int sijHi = sijLo + cellSize;
+  //    print("d: $d");
+ //     print("   sijLo: $sijLo   sijHi: $sijHi   d: $d");
       uv.add(List<double>());
+  //    print("   UV LO ${S2Projections.stToUV((1.0 / MAX_CELL_SIZE) * sijLo)}");
       uv[d].add(S2Projections.stToUV((1.0 / MAX_CELL_SIZE) * sijLo));
+  //    print("   UV HI ${S2Projections.stToUV((1.0 / MAX_CELL_SIZE) * sijHi)}");
       uv[d].add(S2Projections.stToUV((1.0 / MAX_CELL_SIZE) * sijHi));
     }
+   // for (S2LatLng latlng in getMyRect()) {
+   //   print(latlng);
+   // }
+  }
+
+  List<S2LatLng> getMyRect() {
+    return <S2LatLng>[
+      derp(0, 0),
+      derp(1, 0),
+      derp(1, 1),
+      derp(0, 1),
+    ];
+  }
+  S2LatLng derp(int i, int j) {
+        S2Point p = S2Projections.faceUvToXyz(face, uv[0][i], uv[1][j]);
+       var latitude =atan2(p.z, sqrt(p.x * p.x + p.y * p.y));
+       var longitude =atan2(p.y, p.x);       
+    return S2LatLng.fromRadians(latitude, longitude);
   }
 
   // Internal method that does the actual work in the constructors.
