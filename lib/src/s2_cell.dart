@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import 'package:s2geometry/src/s2_polygon.dart';
+
 /**
  * An S2Cell is an S2Region object that represents a cell. Unlike S2CellIds, it
  * supports efficient containment and intersection tests. However, it is also a
@@ -31,7 +33,7 @@ import 'r1_interval.dart';
 import 's1_interval.dart';
 import 's2_lat_lng_rect.dart';
 import 's2_projections.dart';
-
+import 's2_polygon.dart';
 class S2Cell {
   final int MAX_CELL_SIZE = 1 << MAX_LEVEL;
 
@@ -203,13 +205,13 @@ class S2Cell {
    // }
   }
 
-  List<S2LatLng> getMyRect() {
-    return <S2LatLng>[
+  S2Polygon getMyRect() {
+    return S2Polygon(<S2LatLng>[
       derp(0, 0),
       derp(1, 0),
       derp(1, 1),
       derp(0, 1),
-    ];
+    ]);
   }
   S2LatLng derp(int i, int j) {
         S2Point p = S2Projections.faceUvToXyz(face, uv[0][i], uv[1][j]);
