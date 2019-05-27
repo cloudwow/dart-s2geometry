@@ -1,3 +1,5 @@
+import 'package:s2geometry/src/s2_lat_lng_rect.dart';
+import 'dart:math';
 import 's2latlng.dart';
 
 class S2Polygon {
@@ -19,6 +21,10 @@ class S2Polygon {
         latSum / latLngs.length, lngSum / latLngs.length);
   }
 
+  S2Polygon grown(double percent) {
+    return shrunken(-percent);
+  }
+
   S2Polygon shrunken(double percent) {
     S2LatLng center = this.center;
 
@@ -32,5 +38,17 @@ class S2Polygon {
       newLatLngs.add(S2LatLng.fromRadians(newLat, newLng));
     }
     return S2Polygon(newLatLngs);
+  }
+
+  S2LatLngRect toRect() {
+    S2LatLngRect result;
+    for (S2LatLng ll in latLngs) {
+      if (result == null) {
+        result = S2LatLngRect.fromPoint(ll);
+      } else {
+        result.addLatLng(ll);
+      }
+    }
+    return result;
   }
 }
